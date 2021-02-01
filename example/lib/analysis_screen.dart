@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:automl_object_detection/automl_object_detection.dart';
 import 'package:camera2/camera2.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as image;
 import 'package:permission_handler/permission_handler.dart';
 
 class AnalysisScreen extends StatelessWidget {
@@ -38,14 +40,22 @@ class __BodyState extends State<_Body> {
 
   var _detectedObjects = const <AutoMLObject>[];
 
-  static const _bitmapWidth = 192.0;
-  static const _bitmapHeight = 192.0;
+  final _previewImage = image.Image(224, 224);
+  // final _previewImage = image.Image(192, 192);
+  final _convertedAnalysisImageBytes = StreamController<Uint8List>();
+
+  static const _displayImagePreview = false;
+
+  static const _bitmapWidth = 224.0;
+  static const _bitmapHeight = 224.0;
+  // static const _bitmapWidth = 192.0;
+  // static const _bitmapHeight = 192.0;
   static const _centerCropAspectRatio = 3.0 / 2.0;
   static const _centerCropWidthPercent = 0.9;
 
   final _detector = AutoMLObjectDetector(
     bitmapSize: const Size(_bitmapWidth, _bitmapHeight),
-    enableMultipleObjects: true,
+    // enableMultipleObjects: true,
   );
 
   @override
@@ -94,6 +104,9 @@ class __BodyState extends State<_Body> {
           reqImageStopwatch.elapsedMilliseconds / totalRequests;
 
       if (imageBytes != null) {
+        if (_displayImagePreview) {
+          _writePreviewAnalysisImage(imageBytes);
+        }
         try {
           processImageStopwatch.start();
           final results = await _detector.process(imageBytes);
@@ -132,7 +145,7 @@ class __BodyState extends State<_Body> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 240,
+            height: 24,
             alignment: Alignment.topCenter,
             child: Stack(
               fit: StackFit.expand,
@@ -204,8 +217,10 @@ class __BodyState extends State<_Body> {
 
   Widget _buildPreview() {
     return Stack(
+      alignment: Alignment.center,
       children: [
-        Positioned.fill(
+        AspectRatio(
+          aspectRatio: 1,
           child: Camera2Preview(
             analysisOptions: const Camera2AnalysisOptions(
               imageSize: const Size(_bitmapWidth, _bitmapHeight),
@@ -217,23 +232,61 @@ class __BodyState extends State<_Body> {
             onPlatformViewCreated: (ctrl) => _ctrl = ctrl,
           ),
         ),
-        Center(
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width * _centerCropWidthPercent,
-            child: AspectRatio(
-              aspectRatio: _centerCropAspectRatio,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.red),
-                ),
+        if (_displayImagePreview) ...[
+          Opacity(
+            opacity: 0.25,
+            child: StreamBuilder<Uint8List>(
+              stream: _convertedAnalysisImageBytes.stream,
+              builder: (context, snapshot) => snapshot.hasData
+                  ? Image.memory(
+                      snapshot.data,
+                      gaplessPlayback: true,
+                      isAntiAlias: true,
+                      fit: BoxFit.contain,
+                    )
+                  : Container(),
+            ),
+          ),
+        ],
+        SizedBox(
+          width: MediaQuery.of(context).size.width * _centerCropWidthPercent,
+          child: AspectRatio(
+            aspectRatio: _centerCropAspectRatio,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.red),
               ),
             ),
           ),
         ),
-        Center(
-          child: _buildObjectBoxes(),
-        ),
+        _buildObjectBoxes(),
       ],
     );
+  }
+
+  void _writePreviewAnalysisImage(Uint8List imageBytes) {
+    final pixelsAmount = imageBytes.lengthInBytes ~/ 3;
+
+    var i = 0;
+    var j = 0;
+    while (j < pixelsAmount) {
+      _previewImage.setPixel(
+        j % _previewImage.width,
+        j ~/ _previewImage.height,
+        Color.fromARGB(
+          255,
+          imageBytes[i],
+          imageBytes[i + 1],
+          imageBytes[i + 2],
+        ).value,
+      );
+      i += 3;
+      j++;
+    }
+    if (!_convertedAnalysisImageBytes.isClosed) {
+      _convertedAnalysisImageBytes.add(
+        Uint8List.fromList(image.encodePng(_previewImage)),
+      );
+    }
   }
 }
