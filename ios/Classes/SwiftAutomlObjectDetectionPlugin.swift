@@ -62,10 +62,15 @@ public class SwiftAutomlObjectDetectionPlugin: NSObject, FlutterPlugin {
                 let uiImage = imageFromARGB32Bitmap(pixels: &pixels, width: Int(size.width), height: Int(size.height))!
                 let image = VisionImage(image: uiImage)
                 detector.process(image) { detectedObjects, error in
-                    guard error == nil, let detectedObjects = detectedObjects, !detectedObjects.isEmpty else {
+                    guard error == nil, let detectedObjects = detectedObjects else {
                         DispatchQueue.main.async {
                             result(FlutterError(code: "", message: error?.localizedDescription, details: nil))
                         }
+                        return
+                    }
+                    
+                    if (detectedObjects.isEmpty) {
+                        result([Dictionary<String, Any?>]())
                         return
                     }
                     
