@@ -1,7 +1,7 @@
 PODS:
   - automl_object_detection (0.0.1):
     - Flutter
-    - GoogleMLKit/ObjectDetection (= 2.0.0)
+    - GoogleMLKit/ObjectDetection
   - camera2 (0.0.1):
     - Flutter
   - Flutter (1.0.0)
@@ -109,7 +109,7 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/permission_handler/ios"
 
 SPEC CHECKSUMS:
-  automl_object_detection: 750ea19abcf8216f8dfded3b3be7713a7dcbab68
+  automl_object_detection: 01d5584492330646fb81f7525b93724c44d465bc
   camera2: 5a45ac7cd03a862941c6e48df901ce077901a830
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
   GoogleDataTransport: 1024b1a4dfbd7a0e92cb20d7e0a6f1fb66b449a4
